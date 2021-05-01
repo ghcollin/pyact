@@ -20,6 +20,11 @@ SOFTWARE.
 import asyncio
 import inspect
 
+from typing import List, Dict, Callable
+
+JSON = Dict
+PyactApp = Callable[['Context'], JSON]
+
 def to_async(fn):
     if inspect.iscoroutinefunction(fn):
         return fn
@@ -32,7 +37,7 @@ class Context:
     def __init__(self):
         self._notify = asyncio.Event()
 
-    def event_callback(self, fn, values=None):
+    def event_callback(self, fn, values: List[str] = None) -> None:
         self._callbacks.append(to_async(fn))
         return {
             '__is_callback': True,
@@ -42,25 +47,25 @@ class Context:
             }]
         }
 
-    async def call_event(self, json):
+    async def call_event(self, json: JSON) -> None:
         cb = self._callbacks[json['key']]
         if len(json['values']) > 0:
             await cb(json['values'])
         else:
             await cb()
 
-    def next_key(self):
+    def next_key(self) -> str:
         self._key += 1
         return str(self._key)
 
-    def render(self, app):
+    def render(self, pyact_app: PyactApp) -> JSON:
         self._callbacks = []
         self._key = 0
-        return app(self)
+        return pyact_app(self)
 
-    def notify(self):
+    def notify(self) -> None:
         self._notify.set()
 
-    async def wait(self):
+    async def wait(self) -> None:
         await self._notify.wait()
         self._notify.clear()

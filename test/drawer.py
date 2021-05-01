@@ -97,6 +97,6 @@ if __name__ == "__main__":
         ]
     )
 
-    server_app = pyact.starlette.create_app(app(), index_html)
+    server_app = pyact.starlette.create_app(app, index_html)
 
     uvicorn.run(server_app, host=address, port=port)

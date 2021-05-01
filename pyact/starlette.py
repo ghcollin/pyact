@@ -21,13 +21,13 @@ from starlette.applications import Starlette
 from starlette.endpoints import WebSocketEndpoint, HTTPEndpoint
 from starlette.websockets import WebSocket
 from starlette.responses import HTMLResponse
-import typing
+from typing import Callable, Any
 import asyncio
 
 from .context import Context
 from .types import PyactApp
 
-def create_app(pyact_app: PyactApp, index_html: str) -> Starlette:
+def create_app(pyact_app: Callable[[], PyactApp], index_html: str) -> Starlette:
     app = Starlette(debug=True)
 
     @app.websocket_route("/ws")
@@ -36,8 +36,9 @@ def create_app(pyact_app: PyactApp, index_html: str) -> Starlette:
 
         async def on_connect(self, websocket: WebSocket) -> None:
             await websocket.accept(subprotocol='json')
+            self.pyact_app = pyact_app()
             self.ctx = Context()
-            await websocket.send_json(self.ctx.render(pyact_app))
+            await websocket.send_json(self.ctx.render(self.pyact_app))
 
             self.notify_task = asyncio.create_task(self.notify_loop(websocket))
 
@@ -45,13 +46,13 @@ def create_app(pyact_app: PyactApp, index_html: str) -> Starlette:
             print(close_code)
             self.notify_task.cancel()
 
-        async def on_receive(self, websocket: WebSocket, data: typing.Any) -> None:
+        async def on_receive(self, websocket: WebSocket, data: Any) -> None:
             await self.ctx.call_event(data)
 
         async def notify_loop(self, websocket: WebSocket) -> None:
             while True:
                 await self.ctx.wait()
-                await websocket.send_json(self.ctx.render(pyact_app))
+                await websocket.send_json(self.ctx.render(self.pyact_app))
 
     @app.route("/")
     class Homepage(HTTPEndpoint):
