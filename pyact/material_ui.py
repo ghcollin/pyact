@@ -17,63 +17,42 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-from .html import basic_element, Svg
-from .component import state, combine_callbacks
+from .html import svg
+from .component import state, callback, combine_callbacks, basic_element, create_namespace_element
 
 from typing import Optional, Dict
-from .types import PyactApp, ChildList
+from .context import Component, ChildList
 
 MATERIAL_UI_CDN = "https://unpkg.com/@material-ui/core@latest/umd/material-ui.production.min.js"
+MATERIAL_ICONS_CSS_CDN = "https://fonts.googleapis.com/icon?family=Material+Icons"
 
-def TextField(id: Optional[str] = None, key: Optional[str] = None, props: Optional[Dict] = None, children: Optional[ChildList] = None) -> PyactApp:
-    return basic_element('MaterialUI.TextField', id, key, props, children)
+el, void = create_namespace_element('MaterialUI.')
 
-def Button(id: Optional[str] = None, key: Optional[str] = None, props: Optional[Dict] = None, children: Optional[ChildList] = None) -> PyactApp:
-    return basic_element('MaterialUI.Button', id, key, props, children)
-
-def AppBar(id: Optional[str] = None, key: Optional[str] = None, props: Optional[Dict] = None, children: Optional[ChildList] = None) -> PyactApp:
-    return basic_element('MaterialUI.AppBar', id, key, props, children)
-
-def Toolbar(id: Optional[str] = None, key: Optional[str] = None, props: Optional[Dict] = None, children: Optional[ChildList] = None) -> PyactApp:
-    return basic_element('MaterialUI.Toolbar', id, key, props, children)
-
-def CssBaseline() -> PyactApp:
+def CssBaseline() -> Component:
     return basic_element('MaterialUI.CssBaseline', None, None, None, None)
 
-def Drawer(id: Optional[str] = None, key: Optional[str] = None, props: Optional[Dict] = None, children: Optional[ChildList] = None) -> PyactApp:
-    return basic_element('MaterialUI.Drawer', id, key, props, children)
+def Icon(name: str, id: Optional[str] = None, key: Optional[str] = None, props: Optional[Dict] = None, **kw_args) -> Component:
+    return basic_element('MaterialUI.Icon', id, key, props, children=[name], **kw_args)
 
-def List(id: Optional[str] = None, key: Optional[str] = None, props: Optional[Dict] = None, children: Optional[ChildList] = None) -> PyactApp:
-    return basic_element('MaterialUI.List', id, key, props, children)
-
-def ListItem(id: Optional[str] = None, key: Optional[str] = None, props: Optional[Dict] = None, children: Optional[ChildList] = None) -> PyactApp:
-    return basic_element('MaterialUI.ListItem', id, key, props, children)
-
-def ListItemIcon(id: Optional[str] = None, key: Optional[str] = None, props: Optional[Dict] = None, children: Optional[ChildList] = None) -> PyactApp:
-    return basic_element('MaterialUI.ListItemIcon', id, key, props, children)
-
-def ListItemText(id: Optional[str] = None, key: Optional[str] = None, props: Optional[Dict] = None, children: Optional[ChildList] = None) -> PyactApp:
-    return basic_element('MaterialUI.ListItemText', id, key, props, children)
-
-def IconButton(id: Optional[str] = None, key: Optional[str] = None, props: Optional[Dict] = None, children: Optional[ChildList] = None) -> PyactApp:
-    return basic_element('MaterialUI.IconButton', id, key, props, children)
-
-def Icon(name: str, id: Optional[str] = None, key: Optional[str] = None, props: Optional[Dict] = None) -> PyactApp:
-    return basic_element('MaterialUI.Icon', id, key, props, children=[name])
-
-def SvgIcon(d: str, id: Optional[str] = None, key: Optional[str] = None, props: Optional[Dict] = None) -> PyactApp:
+def SvgIcon(d: str, id: Optional[str] = None, key: Optional[str] = None, props: Optional[Dict] = None, **kw_args) -> Component:
     return basic_element('MaterialUI.SvgIcon', id, key, props, children=[
-        Svg(props={'d': d})
-    ])
+        svg(props={'d': d})
+    ], **kw_args)
 
-def Typography(text: str, id: Optional[str] = None, key: Optional[str] = None, props: Optional[Dict] = None) -> PyactApp:
-    return basic_element('MaterialUI.Typography', id, key, props, children=[text])
+def Typography(text: str, id: Optional[str] = None, key: Optional[str] = None, props: Optional[Dict] = None, **kw_args) -> Component:
+    return basic_element('MaterialUI.Typography', id, key, props, children=[text], **kw_args)
 
-@state
-def LiveTextField(state, ctx, id: Optional[str] = None, key: Optional[str] = None, props: Optional[Dict] = None) -> PyactApp:
-    state.add_listener(ctx)
-    value, set_value = state.create('value', "")
-    async def onChange(values):
-        set_value(values['target.value'])
-    props = combine_callbacks(props, 'onChange', ctx.event_callback(onChange, ['target.value']))
-    return TextField(id, key, {**props, 'value': value})
+FormControlLabel = void('FormControlLabel')
+Switch = void('Switch')
+Divider = void('Divider')
+
+__getattr__ = el
+
+TextField = el('TextField')
+
+async def controlled_text_field(id: Optional[str] = None, key: Optional[str] = None, props: Optional[Dict] = None, **kw_args) -> Dict:
+    value, set_value = await state('value', "")
+    async def onChange(value):
+        set_value(value)
+    props = combine_callbacks({**kw_args, **props} if props else kw_args, 'onChange', callback(onChange, ['e.target.value']))
+    return await TextField(id, key, {**props, 'value': value})

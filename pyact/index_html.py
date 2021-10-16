@@ -19,6 +19,7 @@ SOFTWARE.
 
 from typing import List, Optional
 
+
 template = """<!DOCTYPE html>
 <html>
   <head>
@@ -32,7 +33,7 @@ template = """<!DOCTYPE html>
     </style>
     <div id="root"></div>
     {scripts}
-    <script type="text/javascript">
+    <script type="module">
 //<![CDATA[
 'use strict';
 {javascript_head}
@@ -43,22 +44,37 @@ template = """<!DOCTYPE html>
 </html>
 """
 
-websocket_javascript = """
-'use strict';
+"""<script type="module">
+</script>"""
 
+import_es_module = """<script type="module">
+import * as {name} from "{url}";
+window.{name} = {name};
+</script>"""
+
+websocket_javascript = """
 const h = React.createElement;
 
 function get_component(name) {
-    let c = name.split('.').reduce((o,i)=>o[i], window)
+    let c = name.split('.').reduce((o,i)=> {
+        if (!o) {
+            console.log("Undefined component: " + name);
+        }
+        return o[i];
+    }, window)
     return c ? c : name;
 }
 
 function obj_map(obj, callback) {
-    var result = {};
-    Object.keys(obj).forEach(function (key) {
-        result[key] = callback.call(obj, obj[key], key, obj);
-    });
-    return result;
+    if (Array.isArray(obj)) {
+        return obj.map(callback)
+    } else {
+        var result = {}
+        Object.keys(obj).forEach(function (key) {
+            result[key] = callback.call(obj, obj[key], key, obj);
+        });
+        return result;
+    }
 }
 
 function ary_to_dict_map(ary, callback) {
@@ -73,21 +89,45 @@ function to_callback(json) {
     return (e) => {
         json['cbs'].map(cb => connection.send(JSON.stringify({
             key: cb["key"],
-            values: ary_to_dict_map( cb["values"], val => val.split('.').reduce((o,i)=>o[i], e) )
+            //values: ary_to_dict_map( cb["values"], val => val.split('.').reduce((o,i)=>o[i], e) )
+            values: cb["values"].map(val => val.split('.').slice(1).reduce((o,i)=>o[i],e))
         })))
     }
+}
+
+function eval_js_fn(o) {
+    return get_component(o.fn)(...o.args)
+}
+
+function prop_render(o) {
+    return typeof o === "object" ?
+        ("__is_callback" in o ? 
+            to_callback(o) : 
+            ("__is_object" in o ? 
+                RecursiveRender(o) :
+                ("__is_fn" in o ?
+                    eval_js_fn(o) :
+                    obj_map(o, prop_render)
+                )
+            )
+        ) : o
 }
 
 function RecursiveRender(json) {
     return h(
         get_component(json.el),
-        obj_map(json.props, v => 
-            typeof v === "object" && "__is_callback" in v ? to_callback(v) : v)
-        ,
-        "children" in json ? json.children.map(child =>
-            typeof child === "string" ? child :
-            RecursiveRender(child)
-        ) : []
+        obj_map(json.props, prop_render),
+        "children" in json
+            ? (json.children
+                ? (Array.isArray(json.children) 
+                    ? json.children.map(child =>
+                        typeof child === "string" 
+                            ? child
+                            : RecursiveRender(child)
+                        )
+                    : RecursiveRender(json.children) ) 
+                : null )
+            : null
     )
 }
 
@@ -114,12 +154,14 @@ def index_html(server_url:str,
         title: Optional[str] = None, 
         crossorigin_scripts: Optional[List[str]] = None, 
         scripts: Optional[List[str]] = None, 
+        modules: Optional[List[dict]] = None,
         react_urls: Optional[List[str]] = None, 
         style_urls: Optional[List[str]] = None, 
         style: Optional[str] = None) -> str:
     title = title if title else ""
     crossorigin_scripts = crossorigin_scripts if crossorigin_scripts else []
     scripts = scripts if scripts else []
+    modules = modules if modules else []
     react_urls = react_urls if react_urls else REACT_CDNS
     style_urls = style_urls if style_urls else []
     style = style if style else ""
@@ -129,6 +171,8 @@ def index_html(server_url:str,
             '<script crossorigin src="{}"></script>'.format(url) for url in react_urls + crossorigin_scripts
         ] + [
             '<script src="{}"></script>'.format(url) for url in scripts
+        ] + [
+            import_es_module.format(**es_module) for es_module in modules
         ]),
         styles = "\n".join([
             '<link rel="stylesheet" href="{}" />'.format(url) for url in style_urls

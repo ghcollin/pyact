@@ -17,28 +17,34 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-from typing import Optional, Dict
+from typing import Optional, Dict, List, Any
+from .context import Component, ChildList
+from .component import basic_element, create_namespace_element
 
-from .types import PyactApp, ChildList
-
-def basic_element(el: str, id: Optional[str], key: Optional[str], props: Optional[Dict], children: Optional[ChildList]) -> PyactApp:
-    return lambda ctx: {
-        'el': "{}#{}".format(el, id) if id else el,
-        'props' : {
-            **(props if props else {}),
-            'key': key if key else ctx.next_key()
-        },
-        'children': [ c(ctx) if callable(c) else c for c in children ] if children else []
-    }
-
-def Div(id: Optional[str] = None, key: Optional[str] = None, props: Optional[Dict] = None, children: Optional[ChildList] = None) -> PyactApp:
-    return basic_element('div', id, key, props, children)
+# def Div(id: Optional[str] = None, key: Optional[str] = None, props: Optional[Dict] = None, children: Optional[ChildList] = None, **kw_args) -> Component:
+#     return basic_element('div', id, key, props, children, **kw_args)
     
-def B(id: Optional[str] = None, key: Optional[str] = None, props: Optional[Dict] = None, children: Optional[ChildList] = None) -> PyactApp:
-    return basic_element('b', id, key, props, children)
+# def B(id: Optional[str] = None, key: Optional[str] = None, props: Optional[Dict] = None, children: Optional[ChildList] = None, **kw_args) -> Component:
+#     return basic_element('b', id, key, props, children, **kw_args)
 
-def Svg(id: Optional[str] = None, key: Optional[str] = None, props: Optional[Dict] = None) -> PyactApp:
-    return basic_element('svg', id, key, props, None)
+# def Svg(id: Optional[str] = None, key: Optional[str] = None, props: Optional[Dict] = None, **kw_args) -> Component:
+#     return basic_element('svg', id, key, props, None, **kw_args)
 
-def Main(id: Optional[str] = None, key: Optional[str] = None, props: Optional[Dict] = None, children: Optional[ChildList] = None) -> PyactApp:
-    return basic_element('main', id, key, props, children)
+# def Main(id: Optional[str] = None, key: Optional[str] = None, props: Optional[Dict] = None, children: Optional[ChildList] = None, **kw_args) -> Component:
+#     return basic_element('main', id, key, props, children, **kw_args)
+
+# def Header(id: Optional[str] = None, key: Optional[str] = None, props: Optional[Dict] = None, children: Optional[ChildList] = None, **kw_args) -> Component:
+#     return basic_element('header', id, key, props, children, **kw_args)
+
+
+__getattr__, void = create_namespace_element('')
+
+# #div = el('div')
+# b = el('b')
+# main = el('main')
+# header = el('header')
+
+svg = void('svg')
+
+# def __getattr__(name: str):
+#     return el(name)
