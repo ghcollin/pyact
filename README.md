@@ -9,6 +9,16 @@ See the `examples` folder for these examples.
 
 Currently in an early development stage.
 
+# Installation 
+
+```
+pip install git+https://github.com/ghcollin/pyact.git
+```
+
+Dependencies: `starlette`.
+
+You will also need a ASGI server through which to host the app. The examples use `uvicorn` which you can install with `pip install uvicorn`.
+
 # Basic usage
 
 Your app must be organised as a nested function. The outer function should be `async` and returns the inner function, which must be `async`. The outer function defines the global scope of the app, and shares state between clients; see the `global_rte.py` for an example.
